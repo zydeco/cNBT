@@ -301,6 +301,46 @@ const char* nbt_type_to_string(nbt_type);
  */
 const char* nbt_error_to_string(nbt_status);
 
+                     /***** Region File Functions *****/
+/*
+ * Dealing with MCR files:
+ *
+ * - open the file with mcr_open
+ * - get relevant chunks with mcr_chunk_get, inspect them or modify them
+ * - if you modify a chunk, set it with mcr_chunk_set when you're done
+ * - free the chunks you've got with nbt_free
+ * - close the file with mcr_close, if you opened it in a writable mode, it will be saved now
+ */
+
+typedef struct MCR MCR;
+
+/*
+ * Opens a MCR file
+ * valid mode flags: O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_EXCL, O_TRUNC
+ */
+MCR* mcr_open(const char *path, int mode);
+
+/* Closes a MCR file
+ * If it was open in a writable mode, it is written to disk now.
+ * All memory associated with it is freed, including chunks that still hold 
+ * references, you'll want to clone chunk root nodes if you need them after closing the file.
+ */
+int mcr_close(MCR* mcr);
+
+/*
+ * Gets a chunk's root node from a MCR or NULL if it doesn't exist, or there's a parse error.
+ * Sets errno to an error code if there's an error, or NBT_OK otherwise.
+ * If you modify the node, set it with mcr_chunk_set so it'll be written to the file
+ * Always remember to free it with nbt_free.
+ */
+nbt_node *mcr_chunk_get(MCR *mcr, int x, int z);
+
+/*
+ * Sets a root node for a (possibly empty) chunk, or deletes the chunk if passed NULL
+ * Returns 0 on success, -1 on error
+ */
+int mcr_chunk_set(MCR *mcr, int x, int z, nbt_node *root);
+
 #ifdef __cplusplus
 }
 #endif

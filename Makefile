@@ -6,7 +6,8 @@
 # it, you can buy us a beer in return.
 # -----------------------------------------------------------------------------
 
-CFLAGS=-g -Wcpp -Wall -Wextra -std=c99 -pedantic -fPIC
+CFLAGS=-g -Wall -Wextra -std=c99 -pedantic -fPIC
+OBJS=buffer.o nbt_loading.o nbt_parsing.o nbt_treeops.o nbt_util.o mcr.o
 
 all: nbtreader check regioninfo
 
@@ -22,13 +23,11 @@ regioninfo: regioninfo.c libnbt.a
 test: check
 	cd testdata && ls -1 *.nbt | xargs -n1 ../check && cd ..
 
-main.o: main.c
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-libnbt.a: buffer.o nbt_loading.o nbt_parsing.o nbt_treeops.o nbt_util.o
-	ar -rcs libnbt.a buffer.o nbt_loading.o nbt_parsing.o nbt_treeops.o nbt_util.o
+libnbt.a: $(OBJS)
+	ar -rcs libnbt.a $(OBJS)
 
-buffer.o: buffer.c
-nbt_loading.o: nbt_loading.c
-nbt_parsing.o: nbt_parsing.c
-nbt_treeops.o: nbt_treeops.c
-nbt_util.o: nbt_util.c
+clean:
+	rm -rf $(OBJS) *.dSYM libnbt.a nbtreader check regioninfo

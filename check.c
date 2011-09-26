@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 
 static void die(const char* message)
 {
@@ -90,6 +91,33 @@ int main(int argc, char** argv)
     }
     printf("OK.\n");
 
+    // write tree to a new mcr file
+    printf("Checking region file... ");
+    MCR *mcr = mcr_open("delete_me.mcr", O_RDWR|O_CREAT);
+    if (mcr == NULL) die("Could not create region file");
+    mcr_chunk_set(mcr, 0, 0, tree); // tree is now owned by the MCR, it's freed after mcr_close
+    if (mcr_close(mcr)) die("could not save mcr");
+    
+    mcr = mcr_open("delete_me.mcr", O_RDONLY);
+    if (mcr == NULL) die("Could not read region file");
+    tree = mcr_chunk_get(mcr, 0, 0);
+    if(!nbt_eq(tree, tree_copy))
+    {
+        printf("Original tree:\n%s\n", the_tree);
+
+        char* copy = nbt_dump_ascii(tree_copy);
+        if(copy == NULL) die_with_err(err);
+
+        printf("Reparsed tree:\n%s\n", copy);
+        die("Trees not equal.");
+    }
+    mcr_close(mcr); // frees tree
+    
+    if(remove("delete_me.mcr") == -1)
+        die("Could not delete delete_me.mcr. Race condition?");
+    printf("OK.\n");
+    
+    
     printf("Freeing resources... ");
 
     fclose(temp);
@@ -97,7 +125,6 @@ int main(int argc, char** argv)
     if(remove("delete_me.nbt") == -1)
         die("Could not delete delete_me.nbt. Race condition?");
 
-    nbt_free(tree);
     nbt_free(tree_copy);
 
     printf("OK.\n");

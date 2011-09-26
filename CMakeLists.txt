@@ -21,4 +21,5 @@ ADD_LIBRARY(nbt buffer.c
   nbt_parsing.c
   nbt_treeops.c
   nbt_util.c
+  mcr.c
 )
