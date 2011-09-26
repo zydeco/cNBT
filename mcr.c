@@ -118,12 +118,14 @@ err:
 int mcr_close(MCR *mcr)
 {
     assert(mcr);
+    uint32_t *chunkLoc = NULL, *chunkTime = NULL;
+    void *empty = NULL;
     
     if (!mcr->readonly) {
         // write file
-        uint32_t *chunkLoc = calloc(1024, 4);
-        uint32_t *chunkTime = calloc(1024, 4);
-        void *empty = calloc(4096, 1);
+        chunkLoc = calloc(1024, 4);
+        chunkTime = calloc(1024, 4);
+        empty = calloc(4096, 1);
         
         // write chunks
         lseek(mcr->fd, 8192, SEEK_SET);
@@ -160,9 +162,9 @@ int mcr_close(MCR *mcr)
         if (write(mcr->fd, chunkLoc, 4096) != 4096) goto err;
         if (write(mcr->fd, chunkTime, 4096) != 4096) goto err;
 
-        free(chunkLoc);
-        free(chunkTime);
-        free(empty);
+        free(chunkLoc); chunkLoc = NULL;
+        free(chunkTime); chunkTime = NULL;
+        free(empty); empty = NULL;
     }
     
     close(mcr->fd);
@@ -172,6 +174,9 @@ int mcr_close(MCR *mcr)
 err:
     close(mcr->fd);
     _mcr_free(mcr);
+    free(chunkLoc);
+    free(chunkTime);
+    free(empty);
     return -1;
 }
 
