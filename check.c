@@ -95,7 +95,8 @@ int main(int argc, char** argv)
     printf("Checking region file... ");
     MCR *mcr = mcr_open("delete_me.mcr", O_RDWR|O_CREAT);
     if (mcr == NULL) die("Could not create region file");
-    mcr_chunk_set(mcr, 0, 0, tree); // tree is now owned by the MCR, it's freed after mcr_close
+    mcr_chunk_set(mcr, 0, 0, tree); // save a node into the mcr
+    nbt_free(tree);
     if (mcr_close(mcr)) die("could not save mcr");
     
     mcr = mcr_open("delete_me.mcr", O_RDONLY);
@@ -125,6 +126,7 @@ int main(int argc, char** argv)
     if(remove("delete_me.nbt") == -1)
         die("Could not delete delete_me.nbt. Race condition?");
 
+    nbt_free(tree);
     nbt_free(tree_copy);
 
     printf("OK.\n");
