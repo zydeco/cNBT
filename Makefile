@@ -27,7 +27,7 @@ test: check
 	$(CC) $(CFLAGS) -c $< -o $@
 
 libnbt.a: $(OBJS)
-	ar -rcs libnbt.a $(OBJS)
+	$(AR) -rcs libnbt.a $(OBJS)
 
 clean:
 	rm -rf $(OBJS) *.dSYM libnbt.a nbtreader check regioninfo

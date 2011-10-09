@@ -85,6 +85,9 @@ struct MCR * mcr_open(const char *path, int mode)
     void *header = NULL;
     
     // open file
+    #ifdef __WIN32__
+    mode |= O_BINARY;
+    #endif
     mcr->fd = open(path, mode, 0666);
     if (mcr->fd == -1) goto err;
     
