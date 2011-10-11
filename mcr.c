@@ -145,6 +145,7 @@ int mcr_close(MCR *mcr)
                 goto err;
             }
             chunkLoc[i] = (chunkOffsetBlocks << 8) | chunkLenBlocks;
+            chunkTime[i] = chunk->timestamp;
 
             uint32_t chunkLen = htonl(chunk->len);
             if (write(mcr->fd, &chunkLen, 4) != 4) goto err;
