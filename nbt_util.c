@@ -131,6 +131,11 @@ bool nbt_eq(const nbt_node* restrict a, const nbt_node* restrict b)
 
         return true;
     }
+    case TAG_INT_ARRAY:
+        if(a->payload.tag_int_array.length != b->payload.tag_int_array.length) return false;
+        return memcmp(a->payload.tag_int_array.data,
+                      b->payload.tag_int_array.data,
+                      4*a->payload.tag_int_array.length) == 0;
 
     default: /* wtf invalid type */
         return false;

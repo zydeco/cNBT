@@ -43,7 +43,8 @@ typedef enum {
     TAG_BYTE_ARRAY = 7, /* char *, 8 bits, unsigned, TAG_INT length */
     TAG_STRING     = 8, /* char *, 8 bits, signed, TAG_SHORT length */
     TAG_LIST       = 9, /* X *, X bits, TAG_INT length, no names inside */
-    TAG_COMPOUND   = 10 /* nbt_tag * */
+    TAG_COMPOUND   = 10, /* nbt_tag * */
+    TAG_INT_ARRAY  = 11 /* long *, 32 bits, signed, TAG_INT length */
 
 } nbt_type;
 
@@ -80,6 +81,11 @@ typedef struct nbt_node {
             unsigned char* data;
             int32_t length;
         } tag_byte_array;
+        
+        struct nbt_int_array {
+            int32_t *data;
+            int32_t length;
+        } tag_int_array;
 
         char* tag_string; /* TODO: technically, this should be a UTF-8 string */
 

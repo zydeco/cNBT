@@ -172,6 +172,33 @@ parse_error:
     return ret;
 }
 
+static inline struct nbt_int_array read_int_array(const char** memory, size_t* length)
+{
+    struct nbt_int_array ret;
+    ret.data = NULL;
+
+    READ_GENERIC(&ret.length, sizeof ret.length, swapped_memscan, goto parse_error);
+
+    if(ret.length < 0) goto parse_error;
+
+    CHECKED_MALLOC(ret.data, 4*ret.length, goto parse_error);
+
+    READ_GENERIC(ret.data, (size_t)4*ret.length, memscan, goto parse_error);
+    // swap
+    if (little_endian()) for(int i=0; i < ret.length; i++)
+        ret.data[i] = ntohl(ret.data[i]);
+
+    return ret;
+
+parse_error:
+    if(errno == NBT_OK)
+        errno = NBT_ERR;
+
+    free(ret.data);
+    ret.data = NULL;
+    return ret;
+}
+
 /*
  * Is the list all one type? If yes, return the type. Otherwise, return
  * TAG_INVALID
@@ -357,6 +384,9 @@ static inline nbt_node* parse_unnamed_tag(nbt_type type, char* name, const char*
     case TAG_COMPOUND:
         node->payload.tag_compound = read_compound(memory, length);
         break;
+    case TAG_INT_ARRAY:
+        node->payload.tag_int_array = read_int_array(memory, length);
+        break;
 
     default:
         goto parse_error; /* Unknown node or TAG_END. Either way, we shouldn't be parsing this. */
@@ -439,6 +469,16 @@ static inline void dump_byte_array(const struct nbt_byte_array ba, struct buffer
     bprintf(b, "]");
 }
 
+static inline void dump_int_array(const struct nbt_int_array ia, struct buffer* b)
+{
+    assert(ia.length >= 0);
+
+    bprintf(b, "[ ");
+    for(int32_t i = 0; i < ia.length; ++i)
+        bprintf(b, "%d ", +ia.data[i]);
+    bprintf(b, "]");
+}
+
 static inline nbt_status dump_list_contents_ascii(const struct tag_list* list, struct buffer* b, size_t ident)
 {
     const struct list_head* pos;
@@ -514,6 +554,12 @@ static inline nbt_status __nbt_dump_ascii(const nbt_node* tree, struct buffer* b
         if(err != NBT_OK)
             return err;
     }
+    else if(tree->type == TAG_INT_ARRAY)
+    {
+        bprintf(b, "TAG_Int_Array(\"%s\"): ", SAFE_NAME(tree));
+        dump_int_array(tree->payload.tag_int_array, b);
+        bprintf(b, "\n");
+    }
 
     else
         return NBT_ERR;
@@ -566,6 +612,30 @@ static nbt_status dump_byte_array_binary(const struct nbt_byte_array ba, struct 
 
     CHECKED_APPEND(b, ba.data, ba.length);
 
+    return NBT_OK;
+}
+
+static nbt_status dump_int_array_binary(const struct nbt_int_array ia, struct buffer* b)
+{
+    int32_t dumped_length = ia.length;
+
+    ne2be(&dumped_length, sizeof dumped_length);
+
+    CHECKED_APPEND(b, &dumped_length, sizeof dumped_length);
+
+    if(ia.length) assert(ia.data);
+
+    // big endian
+    int32_t *be_data = ia.data;
+    if (little_endian()) {
+        be_data = malloc(4*ia.length);
+        if (be_data == NULL) return NBT_EMEM;
+        for(int i=0; i < ia.length; i++) be_data[i] = htonl(ia.data[i]);
+    }
+    
+    CHECKED_APPEND(b, be_data, 4*ia.length);
+
+    if (be_data != ia.data) free(be_data);
     return NBT_OK;
 }
 
@@ -699,6 +769,8 @@ static inline nbt_status __dump_binary(const nbt_node* tree, bool dump_type, str
         return dump_list_binary(tree->payload.tag_list, b);
     else if(tree->type == TAG_COMPOUND)
         return dump_compound_binary(tree->payload.tag_compound, b);
+    else if(tree->type == TAG_INT_ARRAY)
+        return dump_int_array_binary(tree->payload.tag_int_array, b);
 
     else
         return NBT_ERR;
