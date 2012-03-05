@@ -19,6 +19,12 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef __WIN32__
+#include <windows.h>
+#include <winsock.h>
+#else
+#include <netinet/in.h>
+#endif
 
 /* are we running on a little-endian system? */
 static inline int little_endian()
