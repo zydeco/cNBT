@@ -53,7 +53,7 @@ int _mcr_read_chunk(MCR *mcr, int x, int z, void *header)
     chunk->len = ntohl(chunk->len);
     
     // read data
-    chunk->len++; // it's weird, but some libs seem to forget one byte
+    //chunk->len++; // it's weird, but some libs seem to forget one byte
     chunk->data = malloc(chunk->len);
     if (read(mcr->fd, chunk->data, chunk->len) < chunk->len-1) {
         free(chunk->data);
@@ -139,7 +139,7 @@ int mcr_close(MCR *mcr)
             
             assert(lseek(mcr->fd, 0, SEEK_CUR)%4096 == 0);
             size_t chunkOffsetBlocks = lseek(mcr->fd, 0, SEEK_CUR) / 4096;
-            size_t chunkLenBlocks = (chunk->len+4+4095) / 4096;
+            size_t chunkLenBlocks = (chunk->len+4+4096) / 4096;
             if (chunkLenBlocks > 255) {
                 errno = EFBIG;
                 goto err;
