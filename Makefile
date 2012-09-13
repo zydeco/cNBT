@@ -9,7 +9,7 @@
 CFLAGS=-g -Wall -Wextra -std=c99 -pedantic -fPIC
 OBJS=buffer.o nbt_loading.o nbt_parsing.o nbt_treeops.o nbt_util.o mcr.o
 
-all: nbtreader check regioninfo
+all: nbtreader check regioninfo copychunk
 
 nbtreader: main.o libnbt.a
 	$(CC) $(CFLAGS) main.o -L. -lnbt -lz -o nbtreader
@@ -19,6 +19,9 @@ check: check.c libnbt.a
 
 regioninfo: regioninfo.c libnbt.a
 	$(CC) $(CFLAGS) regioninfo.c -L. -lnbt -lz -o regioninfo
+
+copychunk: copychunk.c libnbt.a
+	$(CC) $(CFLAGS) copychunk.c -L. -lnbt -lz -o copychunk
 
 test: check
 	cd testdata && ls -1 *.nbt | xargs -n1 ../check && cd ..
