@@ -53,7 +53,7 @@ int _mcr_read_chunk(MCR *mcr, int x, int z, void *header)
     chunk->len = ntohl(chunk->len);
     
     // read data
-    chunk->len++; // it's weird, but some libs seem to forget one byte
+    //chunk->len++; // it's weird, but some libs seem to forget one byte
     chunk->data = malloc(chunk->len);
     if (read(mcr->fd, chunk->data, chunk->len) < chunk->len-1) {
         free(chunk->data);
