@@ -44,7 +44,7 @@ int _mcr_read_chunk(MCR *mcr, int x, int z, void *header)
     if (offset == 0 && nsect == 0) return 0;
     
     // timestamp
-    chunk->timestamp = ntohl(*(uint32_t*)b+4096);
+    chunk->timestamp = ntohl(*(uint32_t*)(b+4096));
     if (mcr->last_timestamp < chunk->timestamp) mcr->last_timestamp = chunk->timestamp;
     
     // read actual length
