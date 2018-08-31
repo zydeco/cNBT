@@ -66,6 +66,9 @@ void nbt_free(nbt_node* tree)
     else if(tree->type == TAG_INT_ARRAY)
         free(tree->payload.tag_int_array.data);
 
+    else if(tree->type == TAG_LONG_ARRAY)
+        free(tree->payload.tag_long_array.data);
+
     else if(tree->type == TAG_STRING)
         free(tree->payload.tag_string);
 
@@ -159,6 +162,19 @@ nbt_node* nbt_clone(nbt_node* tree)
 
         ret->payload.tag_int_array.data   = newbuf;
         ret->payload.tag_int_array.length = tree->payload.tag_int_array.length;
+    }
+
+    else if(tree->type == TAG_LONG_ARRAY)
+    {
+        int32_t* newbuf;
+        CHECKED_MALLOC(newbuf, 8*tree->payload.tag_long_array.length, goto clone_error);
+
+        memcpy(newbuf,
+               tree->payload.tag_long_array.data,
+               8*tree->payload.tag_long_array.length);
+
+        ret->payload.tag_long_array.data   = newbuf;
+        ret->payload.tag_long_array.length = tree->payload.tag_long_array.length;
     }
 
     else if(tree->type == TAG_LIST)
@@ -300,6 +316,19 @@ nbt_node* nbt_filter(const nbt_node* tree, nbt_predicate_t filter, void* aux)
                tree->payload.tag_int_array.length);
 
         ret->payload.tag_int_array.length = tree->payload.tag_int_array.length;
+    }
+
+    else if(tree->type == TAG_LONG_ARRAY)
+    {
+        CHECKED_MALLOC(ret->payload.tag_long_array.data,
+                       8*tree->payload.tag_long_array.length,
+                       goto filter_error);
+
+        memcpy(ret->payload.tag_long_array.data,
+               tree->payload.tag_long_array.data,
+               tree->payload.tag_long_array.length);
+
+        ret->payload.tag_long_array.length = tree->payload.tag_long_array.length;
     }
 
     /* Okay, we want to keep this node, but keep traversing the tree! */

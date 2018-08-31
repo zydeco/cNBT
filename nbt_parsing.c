@@ -25,6 +25,7 @@
 #else
 #include <netinet/in.h>
 #endif
+#define ntohll(x) ( ( (uint64_t)(ntohl( (uint32_t)((x << 32) >> 32) )) << 32) | ntohl( ((uint32_t)(x >> 32)) ) )     
 
 /* are we running on a little-endian system? */
 static inline int little_endian()
@@ -193,6 +194,33 @@ static inline struct nbt_int_array read_int_array(const char** memory, size_t* l
     // swap
     if (little_endian()) for(int i=0; i < ret.length; i++)
         ret.data[i] = ntohl(ret.data[i]);
+
+    return ret;
+
+parse_error:
+    if(errno == NBT_OK)
+        errno = NBT_ERR;
+
+    free(ret.data);
+    ret.data = NULL;
+    return ret;
+}
+
+static inline struct nbt_long_array read_long_array(const char** memory, size_t* length)
+{
+    struct nbt_long_array ret;
+    ret.data = NULL;
+
+    READ_GENERIC(&ret.length, sizeof ret.length, swapped_memscan, goto parse_error);
+
+    if(ret.length < 0) goto parse_error;
+
+    CHECKED_MALLOC(ret.data, 8*ret.length, goto parse_error);
+
+    READ_GENERIC(ret.data, (size_t)8*ret.length, memscan, goto parse_error);
+    // swap
+    if (little_endian()) for(int i=0; i < ret.length; i++)
+        ret.data[i] = ntohll(ret.data[i]);
 
     return ret;
 
@@ -393,6 +421,9 @@ static inline nbt_node* parse_unnamed_tag(nbt_type type, char* name, const char*
     case TAG_INT_ARRAY:
         node->payload.tag_int_array = read_int_array(memory, length);
         break;
+    case TAG_LONG_ARRAY:
+        node->payload.tag_long_array = read_long_array(memory, length);
+        break;
 
     default:
         goto parse_error; /* Unknown node or TAG_END. Either way, we shouldn't be parsing this. */
@@ -485,6 +516,16 @@ static inline void dump_int_array(const struct nbt_int_array ia, struct buffer* 
     bprintf(b, "]");
 }
 
+static inline void dump_long_array(const struct nbt_long_array la, struct buffer* b)
+{
+    assert(la.length >= 0);
+
+    bprintf(b, "[ ");
+    for(int32_t i = 0; i < la.length; ++i)
+        bprintf(b, "%d ", +la.data[i]);
+    bprintf(b, "]");
+}
+
 static inline nbt_status dump_list_contents_ascii(const struct tag_list* list, struct buffer* b, size_t ident)
 {
     const struct list_head* pos;
@@ -566,6 +607,12 @@ static inline nbt_status __nbt_dump_ascii(const nbt_node* tree, struct buffer* b
         dump_int_array(tree->payload.tag_int_array, b);
         bprintf(b, "\n");
     }
+    else if(tree->type == TAG_LONG_ARRAY)
+    {
+        bprintf(b, "TAG_Long_Array(\"%s\"): ", SAFE_NAME(tree));
+        dump_long_array(tree->payload.tag_long_array, b);
+        bprintf(b, "\n");
+    }
 
     else
         return NBT_ERR;
@@ -642,6 +689,30 @@ static nbt_status dump_int_array_binary(const struct nbt_int_array ia, struct bu
     CHECKED_APPEND(b, be_data, 4*ia.length);
 
     if (be_data != ia.data) free(be_data);
+    return NBT_OK;
+}
+
+static nbt_status dump_long_array_binary(const struct nbt_long_array la, struct buffer* b)
+{
+    int32_t dumped_length = la.length;
+
+    ne2be(&dumped_length, sizeof dumped_length);
+
+    CHECKED_APPEND(b, &dumped_length, sizeof dumped_length);
+
+    if(la.length) assert(la.data);
+
+    // big endian
+    int64_t *be_data = la.data;
+    if (little_endian()) {
+        be_data = malloc(8*la.length);
+        if (be_data == NULL) return NBT_EMEM;
+        for(int i=0; i < la.length; i++) be_data[i] = ntohll(la.data[i]);
+    }
+    
+    CHECKED_APPEND(b, be_data, 8*la.length);
+
+    if (be_data != la.data) free(be_data);
     return NBT_OK;
 }
 
@@ -777,6 +848,9 @@ static inline nbt_status __dump_binary(const nbt_node* tree, bool dump_type, str
         return dump_compound_binary(tree->payload.tag_compound, b);
     else if(tree->type == TAG_INT_ARRAY)
         return dump_int_array_binary(tree->payload.tag_int_array, b);
+    else if(tree->type == TAG_LONG_ARRAY)
+        return dump_long_array_binary(tree->payload.tag_long_array, b);
+
 
     else
         return NBT_ERR;
